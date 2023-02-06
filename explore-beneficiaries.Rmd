@@ -1,0 +1,55 @@
+---
+title: "Explore Beneficiaries"
+output: html_notebook
+---
+
+
+```{r}
+# This is the only code I'm going to give you for this.
+pacman::p_load(rio, tidyverse)
+beneficiary <- import("data/beneficiary_summary.rds")
+```
+
+
+
+# Beneficiaries
+
+## Number of Beneficiaries Per Year
+
+- Each member should have ONLY a single row per year.
+- Members can appear in multiple years of data.
+- Use dplyr verbs to prove/disprove the two above assertions.
+
+<INSERT CODE CHUNK HERE>
+
+## Min/Max Birthdate
+
+- What is the earliest date of birth in this data set?
+- What is the youngest date of birth in this data set?
+- You don't need to do this by year but if you do, it is fine.
+
+<INSERT CODE CHUNK HERE>
+
+## How many beneficiaries died every year?
+
+- Column: bene_death_dt
+- Just need a count of deceased members. 
+- The date doesn't matter, other than that it is not null.
+
+<INSERT CODE CHUNK HERE>
+
+## Is the number of beneficiaries with diabetes increasing or decreasing?
+
+- Count of beneficiaries per year with diabetes.
+- Column: sp_diabetes
+- You can look in the codebook to read the documentation, but 1 is Yes and 2 is no and this is true for all of these chronic disease T/F columns.
+
+<INSERT CODE CHUNK HERE>
+
+How could you edit data/import_beneficiary_summary.R to replace 1/2 values with Yes/No values?
+
+## Amount spent on beneficiaries
+
+- What is the min/max/average amount paid by Medicare for inpatient events?
+- As above, stratify (group_by) by year.
+- Column: medreimb_ip

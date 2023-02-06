@@ -1,0 +1,53 @@
+---
+title: "Explore Polypharmacy"
+output: html_notebook
+---
+
+
+```{r}
+# This is the only code I'm going to give you for this.
+pacman::p_load(rio, tidyverse)
+beneficiary <- import("data/beneficiary_summary.rds")
+rx <- import("data/prescription_drug_events.rds")
+```
+
+# Joining
+
+## 00000B48BCF4AD29
+
+- Normally, we treat ids as PHI and NOT include it in at report like this.
+- But this is fine. 🤷
+- Join by desnypuf_id and clm_year
+  - clm_year is a variable I added during import.
+
+<INSERT CODE CHUNK HERE>
+
+## Patients with/without pharmacy
+
+- Do all patients have pharmacy? Hint: No!
+  - Prove it!
+- How does this affect my joins?
+
+<INSERT CODE CHUNK HERE>
+
+
+
+# Polypharmacy
+
+## Simple Exploration
+
+- How many beneficiaries have 5+ prescriptions in a year?
+- How many beneficiaries have 10+ prescriptions in a year?
+- And why this isn't REALLY
+
+<INSERT CODE CHUNK HERE>
+
+## More Complex Exploration
+
+- Polypharmacy is BETTER defined as a patient with 5+ prescriptions at the SAME TIME!
+- Think of a better way to approach this, which we will discuss on Friday.
+- You don't have to implement the code, although you may try.
+- But I do want you to think about HOW to approach this.
+
+<INSERT CODE CHUNK HERE>
+
