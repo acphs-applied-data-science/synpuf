@@ -20,15 +20,35 @@ beneficiary <- import("data/beneficiary_summary.rds")
 - Members can appear in multiple years of data.
 - Use dplyr verbs to prove/disprove the two above assertions.
 
-<INSERT CODE CHUNK HERE>
+```{r}
+beneficiary |>
+  summarize(
+    n = n(),
+    n_unique = length(unique(desynpuf_id))
+  )
+beneficiary |>
+  group_by(year) |> 
+  count()
+```
 
-## Min/Max Birthdate
+## Min/Max Birth date
 
 - What is the earliest date of birth in this data set?
 - What is the youngest date of birth in this data set?
 - You don't need to do this by year but if you do, it is fine.
 
-<INSERT CODE CHUNK HERE>
+```{r}
+beneficiary |>
+  summarize(min(bene_birth_dt))
+```
+
+
+```{r}
+beneficiary |>
+  summarize(max(bene_death_dt, na.rm = TRUE))
+
+```
+
 
 ## How many beneficiaries died every year?
 
@@ -36,7 +56,17 @@ beneficiary <- import("data/beneficiary_summary.rds")
 - Just need a count of deceased members. 
 - The date doesn't matter, other than that it is not null.
 
-<INSERT CODE CHUNK HERE>
+```{r}
+beneficiary |>
+  group_by(year) |>
+  summarize(n = sum(!is.na(bene_death_dt)))
+
+beneficiary |>
+  filter(!is.na(bene_death_dt)) |>
+  group_by(year) |>
+  summarize(n = n())
+
+```
 
 ## Is the number of beneficiaries with diabetes increasing or decreasing?
 
@@ -44,7 +74,12 @@ beneficiary <- import("data/beneficiary_summary.rds")
 - Column: sp_diabetes
 - You can look in the codebook to read the documentation, but 1 is Yes and 2 is no and this is true for all of these chronic disease T/F columns.
 
-<INSERT CODE CHUNK HERE>
+```{r}
+beneficiary |>
+  filter(sp_diabetes == 1) |>
+  group_by(year) |>
+  count()
+```
 
 How could you edit data/import_beneficiary_summary.R to replace 1/2 values with Yes/No values?
 
@@ -53,3 +88,23 @@ How could you edit data/import_beneficiary_summary.R to replace 1/2 values with 
 - What is the min/max/average amount paid by Medicare for inpatient events?
 - As above, stratify (group_by) by year.
 - Column: medreimb_ip
+
+
+```{r}
+beneficiary |>
+  group_by(year) |> 
+  summarize(
+    min_paid = min(medreimb_ip),
+    max_paid = max(medreimb_ip)
+  )
+```
+
+```{r}
+beneficiary |>
+  mutate(
+    sp_diabetes = case_when(sp_diabetes == 1~"Yes",
+                            sp_diabetes == 2~"No",
+                            TRUE~"ERROR")
+  )
+```
+

@@ -1,0 +1,201 @@
+---
+title: "Explore Joining"
+output: html_notebook
+---
+
+
+```{r}
+pacman::p_load(rio, tidyverse)
+beneficiary <- import("data/beneficiary_summary.rds")
+rx <- import("data/prescription_drug_events.rds")
+inpatient <- import("data/inpatient_claims.rds")
+outpatient <- import("data/outpatient_claims.rds")
+
+reference_sex <- tibble(cd = c(1, 2), desc = c("Male", "Female"))
+```
+
+Task 01
+
+**Goal**: Compare the number of inpatient stays in year 2008 of men to women. 
+
+To do this, we will break this down into two big steps.
+
+- This first step does not require any relational logic.
+- Create a new data set called `inpatient_counts`.
+    - Use `inpatient`.
+    - Filter to `clm_yr` equal to 2008.
+    - Group by `desynpuf_id`, which is our beneficiary identifier.
+    - Count the number of rows to get the number of unique patients.
+- Remember, it is easier to write this one piece at a time and confirm that it works than to write everything all at once and discover you made multiple errors.
+- Watch out of red x's. If you see one, it means there is an error on that line or possibly the line above.
+
+```{r}
+inpatient_counts <-
+  inpatient |>
+  filter(clm_year == 2008) |>
+  group_by(desynpuf_id) |>
+  count()
+inpatient_counts
+```
+
+Record these values as you go through this document to make it easier for yuo to complete Canvas.
+
+- **Question:** How many rows are in inpatient_counts now?
+- **Answer:** 
+
+Once you are satisfied you have the right answer, use the `bene_sex_ident_cd` from beneficiaries to add a new column to our data set.
+
+
+- I recommend starting with `beneficiaries` and left joining to `inpatient_counts`.
+- The left join function is actually smart enough to recognize the common column name, so you don't have to write that in unless the message annoys you.
+- But you will have to figure out how to filter beneficiaries data to 2008 first.
+- Extra credit if you handle the patients with ZERO inpatient utilization.
+- Once you figure out the join, overwrite inpatient_counts with this new data set. 
+- When you are done, you should have the following columns in `inpatient_counts`:
+  - `desynpuf_id`,
+  - `bene_sex_ident_cd`,
+  - `n`
+  - You can have others if you want, but you need these.
+
+```{r}
+inpatient_counts <-
+  beneficiary |>
+  filter(year == 2008) |>
+    left_join(inpatient_counts) |>
+  mutate(
+    bene_sex_ident_cd = as.factor(bene_sex_ident_cd),
+    n = replace_na(n, 0)
+  ) |>
+  select(desynpuf_id, bene_sex_ident_cd, n)
+```
+
+- **Question:** How many rows are in inpatient_counts now?
+- **Answer:** 
+
+
+# Task 02
+- Now, let's look at the distribution.
+- Draw density plot of n, the number of inpatient utilizations.
+
+```{r}
+ggplot(data = inpatient_counts, aes(x = n)) +
+  geom_density()
+```
+
+- Now apply a facet wrap so that you can compare men and women.
+
+```{r}
+ggplot(data = inpatient_counts, aes(x = n)) +
+  geom_density() +
+  facet_wrap(~bene_sex_ident_cd)
+```
+
+
+
+# Task 03
+
+- What is the minimum number of stays?
+- What is the maximum number of stays?
+
+```{r}
+inpatient_counts |>
+  summarize(
+    min_n = min(n),
+    max_n = max(n)
+  )
+```
+
+# Task 04
+- Insurance providers often try to provide preventative services to their most expensive patients.
+- For example, if we look at the top 1% of patients utilizing inpatient services:
+  - This code will give us the cut-off.
+```{r}
+inpatient_counts |>
+  summarize(cut_point = quantile(n, probs = .99))
+```
+
+So if we know the cut-off is 3, then we can flag this utilization.
+
+```{r}
+inpatient_counts <-
+  inpatient_counts |>
+  mutate(
+    ## hu is short for high utilizers
+    hu = if_else(n > 3, TRUE, FALSE)
+  )
+```
+
+This means that patients with more than 3 inpatient stays account for roughly 1% of the beneficiaries.
+
+But what percentage of inpatient stays do these patients account for?
+
+- Above we created a column called hu.
+- Can you calculate the percentage of inpatient stays caused by these high utilizers?
+```{r}
+inpatient_counts |>
+  group_by(hu) |>
+  summarize(n = n()) |>
+  ungroup() |>
+  mutate(p = 100 * n / sum(n))
+
+inpatient_counts |>
+  group_by(hu) |>
+  summarize(total_utilization = sum(n)) |>
+  ungroup() |>
+  mutate(p = 100 * total_utilization / sum(total_utilization))
+```
+
+You should see that the top 1% of patients cause much more than 1% of inpatient stays.
+
+
+Calculate the percentage of high utilizers who are male?
+
+```{r}
+inpatient_counts |>
+  filter(hu == TRUE) |>
+  group_by(bene_sex_ident_cd) |>
+  count() |>
+  ungroup() |>
+  mutate(p = 100 * n / sum(n))
+```
+
+```{r}
+inpatient_counts |>
+  group_by(bene_sex_ident_cd) |>
+  count() |>
+  ungroup() |>
+  mutate(p = 100 * n / sum(n))
+```
+
+```{r}
+reference_sex <-
+  reference_sex %>%
+  mutate(cd = as.factor(cd))
+
+inpatient_counts %>%
+  filter( hu == TRUE) %>%
+  left_join(reference_sex, by = c("bene_sex_ident_cd" = "cd")) %>%
+  group_by(desc) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(percentage = 100 * n / sum(n))
+
+
+
+reference_sex <- 
+  reference_sex |>
+  mutate(cd = as.factor(cd))
+
+inpatient_counts |>
+  filter(hu == TRUE) |>
+  left_join(
+    reference_sex,
+    by = c("bene_sex_ident_cd" = "cd")
+  ) |>
+  group_by(desc) |>
+  count() |>
+  ungroup() |>
+  mutate(p = 100 * n / sum(n))
+```
+
+

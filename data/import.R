@@ -14,7 +14,7 @@ source("data/import_beneficiary_summary.R")
 rm(list = ls())
 
 ## This one is by far the slowest.
-## The code works, but it gives you a hard time, skip it.
+## The code works, but if it gives you a hard time, skip it.
 source("data/import_carrier_claims.R")
 rm(list = ls())
 
@@ -29,7 +29,7 @@ rm(list = ls())
 
 
 
-# CLEANUP ======================================================================
+# CLEAN UP =====================================================================
 # Set this to TRUE/FALSE in order to make it run/not run.
 # I am setting to FALSE because if we need to change any of our import scripts,
 # it is easier if we DON'T have to download the data again.

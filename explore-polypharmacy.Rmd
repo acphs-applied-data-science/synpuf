@@ -20,16 +20,80 @@ rx <- import("data/prescription_drug_events.rds")
 - Join by desnypuf_id and clm_year
   - clm_year is a variable I added during import.
 
-<INSERT CODE CHUNK HERE>
+### Beneficiary Data
+
+```{r}
+beneficiary |>
+  filter(desynpuf_id == "00000B48BCF4AD29")
+```
+
+### Pharmacy Data
+
+```{r}
+rx |> filter(desynpuf_id == "00000B48BCF4AD29")
+```
+
+### JOIN!!!!
+
+
+```{r}
+beneficiary |>
+  filter(desynpuf_id == "00000B48BCF4AD29") |>
+  inner_join(
+    rx,
+    by = c(
+      "desynpuf_id" = "desynpuf_id",
+      "year" = "clm_year"
+      )
+    )
+```
+
+
 
 ## Patients with/without pharmacy
 
 - Do all patients have pharmacy? Hint: No!
   - Prove it!
-- How does this affect my joins?
+- Create rx_per_beneficiary_year
+- Use this to demonstrate differences in joins.
+- Calculate percent male/female for each number of rx.
 
-<INSERT CODE CHUNK HERE>
+```{r}
+rx_per_beneficiary_year <-
+  rx |>
+  group_by(clm_year, desynpuf_id) |>
+  summarize(n = n())
+rx_per_beneficiary_year
+```
 
+```{r}
+rx_per_beneficiary_year |>
+  group_by(clm_year) |>
+  count()
+```
+
+
+```{r}
+beneficiary |>
+  mutate(
+    bene_sex_ident_cd = case_when(
+      bene_sex_ident_cd == 1~"male",
+      bene_sex_ident_cd == 2~"female",
+      TRUE~"unknown")
+  ) |>
+  left_join(
+    rx_per_beneficiary_year,
+    by = c("desynpuf_id" = "desynpuf_id", "year" = "clm_year")
+  ) |>
+  group_by(year, n_rx = n, bene_sex_ident_cd) |>
+  count() |>
+  pivot_wider(names_from = bene_sex_ident_cd, values_from = n) |>
+  mutate(
+    n_rx = replace_na(n_rx, 0),
+    total = female+male
+  ) |>
+  arrange(year, n_rx)
+```
 
 
 # Polypharmacy
@@ -40,7 +104,13 @@ rx <- import("data/prescription_drug_events.rds")
 - How many beneficiaries have 10+ prescriptions in a year?
 - And why this isn't REALLY
 
-<INSERT CODE CHUNK HERE>
+```{r}
+rx_per_beneficiary_year |>
+  filter(n >= 10) |>
+  group_by(clm_year) |>
+  count()
+```
+
 
 ## More Complex Exploration
 
@@ -50,4 +120,3 @@ rx <- import("data/prescription_drug_events.rds")
 - But I do want you to think about HOW to approach this.
 
 <INSERT CODE CHUNK HERE>
-

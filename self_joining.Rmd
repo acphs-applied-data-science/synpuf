@@ -1,0 +1,112 @@
+---
+title: "Self Joining"
+output: html_notebook
+---
+
+```{r}
+pacman::p_load(lubridate, rio, tidyverse)
+beneficiary <- import("data/beneficiary_summary.rds")
+## I just noticed our import script doesn't conver the discharge
+## date to a true date. This mutate function fixes that & makes
+## it easier to use.
+inpatient <-
+  import("data/inpatient_claims.rds") |>
+  mutate(nch_bene_dschrg_dt = ymd(nch_bene_dschrg_dt))
+```
+
+# Self Joining
+
+- Self joining is when a table is joined onto itself.
+- The inpatient data contains an excellent example.
+- Hospitals are often judged on the percentage of inpatient discharges which have a readmission within 30 days. A lower readmission rate is better. 
+  - Usually the specifics are a little more detailed than that, but for demonstrative purposes, this is adequate.
+
+And hospital readmissions is a GREAT way to demonstrate self joins.
+
+- Each claim in inpatient has a column called `nch_bene_dschrg_dt` which is the discharge date from hospital.
+- We will use the `clm_from_dt` as the admission date.
+- For each discharge, I want to join inpatient on itself for EVERY admission within 30 days.
+- The `select` statements below limit our result set to include ONLY those columns which are actually useful for this analysis.
+  - Don't keep stuff you don't need. It will only get in the way when you self join.
+  - Because you will have multiple columns with nearly identical names prepended by x and y.
+
+```{r}
+readmit <-
+  ## This first use of inpatient gives us our anchor admission dates.
+  inpatient |>
+  select(
+    desynpuf_id,
+    clm_id,
+    nch_bene_admssn_dt = clm_from_dt,
+    nch_bene_dschrg_dt
+  ) |>
+  mutate(thirty_days_dschrg_dt = nch_bene_dschrg_dt + 30) |>
+  ## VERY IMPORTANT TO USE LEFT JOIN!!!
+  left_join(
+    inpatient |>
+      select(
+        ## Note how I RENAME columns!!!
+        desynpuf_id,
+        readmit_clm_id = clm_id,
+        nch_bene_readmssn_dt = clm_from_dt
+      ),
+    by = join_by(
+      desynpuf_id,
+      y$nch_bene_readmssn_dt >= x$nch_bene_dschrg_dt,
+      y$nch_bene_readmssn_dt <= x$thirty_days_dschrg_dt
+    )
+  ) |>
+  mutate(
+    readmssn = case_when(
+      is.na(nch_bene_readmssn_dt) ~ FALSE,
+      TRUE ~ TRUE
+    ),
+    days_to_readmit = nch_bene_readmssn_dt - nch_bene_dschrg_dt
+  )
+
+readmit
+```
+
+- And it would seem that all is well.
+- But not quite.
+
+
+```{r }
+dim(inpatient)
+dim(readmit)
+```
+
+- Our readmit data has MORE rows than inpatient.
+- Some patients had more than one readmission within 30 days of the anchor date.- We can fix this.
+
+```{r }
+readmit <-
+  readmit |>
+  group_by(desynpuf_id, clm_id, nch_bene_admssn_dt, nch_bene_dschrg_dt) |>
+  summarize(
+    n_readmits = sum(readmssn),
+    readmssn = max(readmssn),
+    min_days_to_readmit = min(days_to_readmit)
+  )
+```
+
+Now, let's test it.
+
+```{r }
+dim(inpatient)
+dim(readmit)
+```
+
+- The number of rows matches!!!
+- So now we can answer our actual question!
+
+```{r}
+readmit |>
+  group_by(readmssn) |>
+  count() |>
+  ungroup() |>
+  mutate(p = 100 * n / sum(n))
+```
+
+- Over 10 percent of admissions have a readmission within 30 days.
+- If we dug deeper we should find the risk of this happening goes up with age, comorbidities, etc.

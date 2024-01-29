@@ -2,8 +2,6 @@
 .Rhistory
 .RData
 .Ruserdata
-*.html
+*.nb.html
 .vscode
-*.zip
-*.rds
-*.pdf
+*.
